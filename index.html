@@ -58,7 +58,6 @@ input[type=text],input[type=number]{width:100%;background:var(--bg3);border:1px 
 input:focus{border-color:var(--accent)}
 input::placeholder{color:var(--text3)}
 
-/* SCAN AREA */
 .sa{background:var(--bg3);border:2px dashed var(--border);border-radius:var(--r);padding:28px;text-align:center;margin-bottom:16px;cursor:pointer;transition:border-color .15s;min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
 .sa.on{border-color:var(--accent)}
 .sa i{font-size:38px;color:var(--text3)}.sa.on i{color:var(--accent)}
@@ -245,10 +244,30 @@ input::placeholder{color:var(--text3)}
 
 <div class="toast" id="toast"></div>
 
-<!-- ZXing barcode library -->
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js"></script>
 
 <script>
+// ============================================================
+// ⚙️ ตั้งค่า GAS URL — ใส่ URL Web App ของคุณตรงนี้
+// ============================================================
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwLfO_c8T_Tbor9u7b1NtNafvZZ_404HFOvaVYsr8IcRvZe2bRyjJT00ZafMYB2K5R4/exec';
+
+// ============================================================
+// run() — เรียก GAS ผ่าน fetch (ใช้แทน google.script.run)
+// ต้องใช้ Content-Type: text/plain เพื่อหลีกเลี่ยง CORS preflight
+// ============================================================
+function run(fnName, payload) {
+  return fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ fn: fnName, data: payload })
+  })
+  .then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
+}
+
 let products = {}, sales = [], currentSell = null;
 let codeReader = null, camTarget = null, camStream = null;
 
@@ -258,18 +277,6 @@ function setSyncState(s) {
   const txt = document.getElementById('sync-txt');
   dot.className = 'sync-dot'+(s==='busy'?' busy':s==='err'?' err':'');
   txt.textContent = s==='busy'?'กำลังซิงค์...':s==='err'?'ออฟไลน์':'Sheet ✓';
-}
-
-// ใส่ URL GAS ของคุณตรงนี้
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwLfO_c8T_Tbor9u7b1NtNafvZZ_404HFOvaVYsr8IcRvZe2bRyjJT00ZafMYB2K5R4/exec';
-
-function run(fnName, payload) {
-  return fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' }, // ต้องเป็น text/plain ไม่งั้น GAS preflight fail
-    body: JSON.stringify({ fn: fnName, data: payload })
-  })
-  .then(r => r.json());
 }
 
 async function loadAll(force) {
@@ -284,11 +291,20 @@ async function loadAll(force) {
     setSyncState('ok');
     renderDashboard(); renderStock(); renderHistory();
     if (force) showToast('โหลดข้อมูลจาก Sheet แล้ว ✓');
-  } catch(e) { setSyncState('err'); showToast('เชื่อม Sheet ไม่ได้ ลองรีเฟรช'); }
+  } catch(e) {
+    console.error(e);
+    setSyncState('err');
+    showToast('เชื่อม Sheet ไม่ได้ ลองรีเฟรช');
+  }
 }
 
 /* ---- CAMERA / SCANNER ---- */
 async function openCamera(target) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('Browser นี้ไม่รองรับกล้อง');
+    return;
+  }
+
   camTarget = target;
   const mo = document.getElementById('cam-mo');
   const video = document.getElementById('cam-video');
@@ -297,49 +313,60 @@ async function openCamera(target) {
   mo.classList.add('on');
 
   try {
-    // ขอกล้องหลัง (environment)
     camStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      }
     });
     video.srcObject = camStream;
     await video.play();
+
+    // บังคับ continuous autofocus
+    const track = camStream.getVideoTracks()[0];
+    if (track && track.applyConstraints) {
+      track.applyConstraints({
+        advanced: [{ focusMode: 'continuous' }]
+      }).catch(() => {});
+    }
   } catch(e) {
     closeCamera();
-    showToast('ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการเข้าถึงกล้อง');
+    if (e.name === 'NotAllowedError') {
+      showToast('กรุณาอนุญาตกล้องใน Settings ของ Browser');
+    } else if (e.name === 'NotFoundError') {
+      showToast('ไม่พบกล้องในอุปกรณ์นี้');
+    } else if (e.name === 'NotReadableError') {
+      showToast('กล้องถูกใช้งานโดย App อื่นอยู่');
+    } else {
+      showToast('เปิดกล้องไม่ได้: ' + e.message);
+    }
     return;
   }
 
-  // เริ่ม decode loop ด้วย ZXing
   const hints = new Map();
   const formats = [
-    ZXing.BarcodeFormat.EAN_13,
-    ZXing.BarcodeFormat.EAN_8,
-    ZXing.BarcodeFormat.CODE_128,
-    ZXing.BarcodeFormat.CODE_39,
-    ZXing.BarcodeFormat.UPC_A,
-    ZXing.BarcodeFormat.UPC_E,
-    ZXing.BarcodeFormat.QR_CODE,
-    ZXing.BarcodeFormat.DATA_MATRIX,
+    ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
+    ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39,
+    ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
+    ZXing.BarcodeFormat.QR_CODE, ZXing.BarcodeFormat.DATA_MATRIX,
+    ZXing.BarcodeFormat.ITF,
   ];
   hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
   hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
 
-  codeReader = new ZXing.BrowserMultiFormatReader(hints, 300);
+  // รอกล้องโฟกัสก่อน 1.2 วินาที แล้วค่อยเริ่ม decode
+  await new Promise(r => setTimeout(r, 1200));
+
+  codeReader = new ZXing.BrowserMultiFormatReader(hints, 500);
 
   codeReader.decodeFromVideoElement(video, (result, err) => {
     if (result) {
       const code = result.getText();
-      // แสดงผลชั่วคราว
       resultEl.textContent = '✓ ' + code;
       resultEl.style.display = 'block';
-
-      // vibrate ถ้าได้รับอนุญาต
       if (navigator.vibrate) navigator.vibrate(100);
-
-      setTimeout(() => {
-        closeCamera();
-        onScanSuccess(code);
-      }, 600);
+      setTimeout(() => { closeCamera(); onScanSuccess(code); }, 600);
     }
   });
 }
@@ -349,8 +376,7 @@ function closeCamera() {
   mo.classList.remove('on');
   if (codeReader) { try { codeReader.reset(); } catch(e){} codeReader = null; }
   if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
-  const video = document.getElementById('cam-video');
-  video.srcObject = null;
+  document.getElementById('cam-video').srcObject = null;
 }
 
 function onScanSuccess(code) {
@@ -416,8 +442,11 @@ async function saveProduct() {
     else products[bc] = { bc, name, cost, price, qty, addedAt: new Date().toISOString() };
     setSyncState('ok'); closeAdd(); showToast('เพิ่มสินค้าเรียบร้อย ✓');
     renderDashboard(); renderStock();
-  } catch(e) { setSyncState('err'); showToast('บันทึกไม่สำเร็จ');
-  } finally { btn.innerHTML='<i class="ti ti-check"></i>บันทึก'; btn.disabled=false; }
+  } catch(e) {
+    setSyncState('err'); showToast('บันทึกไม่สำเร็จ');
+  } finally {
+    btn.innerHTML='<i class="ti ti-check"></i>บันทึก'; btn.disabled=false;
+  }
 }
 
 /* ---- SELL ---- */
@@ -461,8 +490,11 @@ async function confirmSell() {
     sa.classList.remove('on'); currentSell=null;
     showToast(`ขาย ${qty} ชิ้น ${fmt(sellPrice*qty)} ✓`);
     renderDashboard();
-  } catch(e) { setSyncState('err'); showToast('บันทึกการขายไม่สำเร็จ');
-  } finally { btn.innerHTML='<i class="ti ti-check"></i>ยืนยันขาย'; btn.disabled=false; }
+  } catch(e) {
+    setSyncState('err'); showToast('บันทึกการขายไม่สำเร็จ');
+  } finally {
+    btn.innerHTML='<i class="ti ti-check"></i>ยืนยันขาย'; btn.disabled=false;
+  }
 }
 
 /* ---- EDIT ---- */
@@ -490,8 +522,11 @@ async function saveEdit() {
     await run('gasUpdateProduct', { bc, name, cost, price, qty });
     products[bc] = { ...products[bc], name, cost, price, qty };
     setSyncState('ok'); closeEdit(); renderStock(); renderDashboard(); showToast('แก้ไขเรียบร้อย ✓');
-  } catch(e) { setSyncState('err'); showToast('แก้ไขไม่สำเร็จ');
-  } finally { btn.textContent='บันทึก'; btn.disabled=false; }
+  } catch(e) {
+    setSyncState('err'); showToast('แก้ไขไม่สำเร็จ');
+  } finally {
+    btn.textContent='บันทึก'; btn.disabled=false;
+  }
 }
 
 async function deleteProduct(bc) {
@@ -500,7 +535,9 @@ async function deleteProduct(bc) {
   try {
     await run('gasDeleteProduct', { bc });
     delete products[bc]; setSyncState('ok'); renderStock(); renderDashboard(); showToast('ลบสินค้าแล้ว');
-  } catch(e) { setSyncState('err'); showToast('ลบไม่สำเร็จ'); }
+  } catch(e) {
+    setSyncState('err'); showToast('ลบไม่สำเร็จ');
+  }
 }
 
 /* ---- RENDER ---- */
@@ -593,4 +630,3 @@ loadAll();
 </script>
 </body>
 </html>
-
