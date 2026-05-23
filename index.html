@@ -163,11 +163,25 @@ input::placeholder{color:var(--text3)}
         <p>แตะเพื่อเปิดกล้องสแกน</p>
       </div>
       <div class="ig"><label class="il">หรือพิมพ์บาร์โค้ด</label><input type="text" id="sell-bc" placeholder="กรอกบาร์โค้ด..." oninput="lookupSell(this.value)"></div>
+
+      <!-- สินค้าจากระบบ -->
       <div id="sell-card" style="display:none">
         <div class="card" id="sell-info"></div>
         <div class="ig" style="margin-top:12px"><label class="il">ราคาขาย (แก้ไขได้)</label><input type="number" id="sell-price"></div>
         <div class="ig"><label class="il">จำนวน</label><input type="number" id="sell-qty" value="1" min="1"></div>
         <button class="btn bs2" id="sell-confirm-btn" onclick="confirmSell()"><i class="ti ti-check"></i>ยืนยันขาย</button>
+      </div>
+
+      <!-- ขายแบบไม่มีบาร์โค้ด -->
+      <div class="dv" style="margin:20px 0 16px"></div>
+      <p class="sxl">ขายสินค้านอกระบบ</p>
+      <div class="csm">
+        <div class="ig" style="margin-bottom:10px"><label class="il">ชื่อสินค้า *</label><input type="text" id="manual-name" placeholder="เช่น โมเดลไม่มีกล่อง"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div><label class="il">ราคาขาย *</label><input type="number" id="manual-price" placeholder="0" inputmode="decimal"></div>
+          <div><label class="il">จำนวน</label><input type="number" id="manual-qty" value="1" min="1" inputmode="numeric"></div>
+        </div>
+        <button class="btn bp" id="manual-confirm-btn" onclick="confirmManualSell()"><i class="ti ti-check"></i>บันทึกการขาย</button>
       </div>
       <div style="height:80px"></div>
     </div>
@@ -487,9 +501,17 @@ async function saveProduct() {
 
 /* ---- SELL ---- */
 function lookupSell(val) {
-  const p = products[val.trim()];
+  const v = val.trim();
   const card = document.getElementById('sell-card');
-  if (!p) { card.style.display='none'; currentSell=null; return; }
+  if (!v) { card.style.display='none'; currentSell=null; return; }
+  const p = products[v];
+  if (!p) {
+    // ไม่พบในระบบ — แสดง hint และโฟกัสที่ manual form
+    card.style.display='none'; currentSell=null;
+    showToast('ไม่พบบาร์โค้ดนี้ในระบบ — กรอกข้อมูลด้านล่างได้เลย');
+    document.getElementById('manual-name').focus();
+    return;
+  }
   currentSell = p;
   const margin = p.cost>0 ? Math.round((p.price-p.cost)/p.cost*100) : 0;
   document.getElementById('sell-info').innerHTML = `
@@ -530,6 +552,31 @@ async function confirmSell() {
     setSyncState('err'); showToast('บันทึกการขายไม่สำเร็จ');
   } finally {
     btn.innerHTML='<i class="ti ti-check"></i>ยืนยันขาย'; btn.disabled=false;
+  }
+}
+
+async function confirmManualSell() {
+  const name = document.getElementById('manual-name').value.trim();
+  const sellPrice = parseFloat(document.getElementById('manual-price').value)||0;
+  const qty = parseInt(document.getElementById('manual-qty').value)||1;
+  if (!name) { showToast('กรุณากรอกชื่อสินค้า'); document.getElementById('manual-name').focus(); return; }
+  if (!sellPrice) { showToast('กรุณากรอกราคาขาย'); document.getElementById('manual-price').focus(); return; }
+  const btn = document.getElementById('manual-confirm-btn');
+  btn.innerHTML = '<div class="spin"></div>'; btn.disabled=true;
+  setSyncState('busy');
+  const saleData = { bc: 'MANUAL', name, qty, sellPrice, cost: 0, date: new Date().toISOString() };
+  try {
+    await run('gasAddSale', saleData);
+    sales.push(saleData); setSyncState('ok');
+    document.getElementById('manual-name').value = '';
+    document.getElementById('manual-price').value = '';
+    document.getElementById('manual-qty').value = 1;
+    showToast(`ขาย "${name}" ${qty} ชิ้น ${fmt(sellPrice*qty)} ✓`);
+    renderDashboard(); renderHistory();
+  } catch(e) {
+    setSyncState('err'); showToast('บันทึกการขายไม่สำเร็จ');
+  } finally {
+    btn.innerHTML='<i class="ti ti-check"></i>บันทึกการขาย'; btn.disabled=false;
   }
 }
 
