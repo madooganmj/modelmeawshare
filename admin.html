@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — โมเดล ฟิกเกอร์ by แมวแชร์</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --pink: #e8547a; --pink-lt: #fdf0f3; --pink-md: #fbd5de; --dark: #1a1a2e; --gray: #6b7280; --light: #f9fafb; --radius: 16px; }
+  body { font-family: 'Sarabun', sans-serif; background: var(--light); color: var(--dark); }
+
+  .nav { background: var(--dark); padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+  .nav-brand { font-family: 'Playfair Display', serif; font-size: 18px; color: white; text-decoration: none; }
+  .nav-badge { background: var(--pink); color: white; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 50px; margin-left: 8px; }
+  .btn-nav-out { padding: 7px 18px; border-radius: 50px; border: 1.5px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.8); background: transparent; font-size: 13px; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+  .btn-nav-out:hover { border-color: white; color: white; }
+
+  .main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card { background: white; border-radius: var(--radius); padding: 20px; border: 1px solid #f0f0f0; }
+  .stat-icon { font-size: 22px; margin-bottom: 10px; }
+  .stat-label { font-size: 12px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .stat-value.pink { color: var(--pink); }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: white; padding: 4px; border-radius: 12px; border: 1px solid #f0f0f0; width: fit-content; }
+  .tab-btn { padding: 8px 20px; border-radius: 10px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; background: transparent; color: var(--gray); transition: all 0.2s; }
+  .tab-btn.active { background: var(--pink); color: white; }
+
+  .table-box { background: white; border-radius: var(--radius); border: 1px solid #f0f0f0; overflow: hidden; }
+  .table-header { padding: 18px 24px; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .table-header h3 { font-size: 16px; font-weight: 600; }
+  .search-input { padding: 8px 14px; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 14px; width: 220px; outline: none; }
+  .search-input:focus { border-color: var(--pink); }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: #fafafa; }
+  th { padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--gray); text-align: left; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 13px 16px; font-size: 14px; border-top: 1px solid #f5f5f5; vertical-align: middle; }
+  tr:hover td { background: #fafafe; }
+
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 50px; font-size: 12px; font-weight: 600; }
+  .badge-pending { background: #fff7ed; color: #c2410c; }
+  .badge-approved { background: #f0fdf4; color: #16a34a; }
+  .badge-rejected { background: #fef2f2; color: #dc2626; }
+  .badge-type { background: #eff6ff; color: #1d4ed8; }
+
+  .action-btns { display: flex; gap: 6px; }
+  .btn-approve, .btn-reject, .btn-edit, .btn-del {
+    padding: 5px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: 'Sarabun', sans-serif;
+  }
+  .btn-approve { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+  .btn-approve:hover { background: #16a34a; color: white; }
+  .btn-reject { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  .btn-reject:hover { background: #dc2626; color: white; }
+  .btn-edit { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .btn-edit:hover { background: #1d4ed8; color: white; }
+  .btn-del { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  .btn-del:hover { background: #dc2626; color: white; }
+
+  .empty-row { text-align: center; color: var(--gray); padding: 48px; }
+  .loading-pulse { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 48px; color: var(--gray); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); animation: pulse 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; } .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; z-index: 999; background: var(--dark); color: white; padding: 12px 20px; border-radius: 12px; font-size: 14px; font-weight: 500; opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.green { background: #16a34a; } .toast.red { background: #dc2626; }
+
+  .login-gate { max-width: 400px; margin: 80px auto; background: white; border-radius: var(--radius); padding: 40px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.08); }
+  .login-gate h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .login-gate p { color: var(--gray); font-size: 14px; margin-bottom: 24px; }
+  .login-gate input { width: 100%; padding: 12px 16px; border: 1.5px solid #e5e7eb; border-radius: 12px; font-size: 15px; outline: none; margin-bottom: 12px; font-family: 'Sarabun', sans-serif; }
+  .login-gate input:focus { border-color: var(--pink); }
+  .login-gate button { width: 100%; padding: 13px; background: var(--pink); color: white; border: none; border-radius: 50px; cursor: pointer; font-size: 15px; font-weight: 600; font-family: 'Sarabun', sans-serif; }
+  .login-gate .err { color: #dc2626; font-size: 13px; margin-top: 8px; }
+
+  /* Products tab */
+  .product-form { padding: 20px 24px; border-bottom: 1px solid #f5f5f5; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.5fr auto; gap: 10px; align-items: end; }
+  .product-form .field label { display: block; font-size: 12px; color: var(--gray); margin-bottom: 4px; }
+  .product-form input { width: 100%; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 9px; font-size: 14px; font-family: 'Sarabun', sans-serif; outline: none; }
+  .product-form input:focus { border-color: var(--pink); }
+  .btn-add { padding: 10px 18px; background: var(--pink); color: white; border: none; border-radius: 9px; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: 'Sarabun', sans-serif; }
+  .ship-input { width: 70px; padding: 6px 8px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; text-align: center; font-family: 'Sarabun', sans-serif; }
+
+  /* Settings tab */
+  .settings-box { background: white; border-radius: var(--radius); border: 1px solid #f0f0f0; padding: 26px; max-width: 560px; }
+  .settings-box .field { margin-bottom: 18px; }
+  .settings-box label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+  .settings-box input { width: 100%; padding: 11px 14px; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-family: 'Sarabun', sans-serif; outline: none; }
+  .settings-box input:focus { border-color: var(--pink); }
+  .settings-box .hint { font-size: 12px; color: var(--gray); margin-top: 4px; }
+  .day-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .day-chip { padding: 8px 14px; border-radius: 50px; border: 1.5px solid #e5e7eb; font-size: 13px; cursor: pointer; transition: all 0.2s; background: white; }
+  .day-chip.active { background: var(--pink); color: white; border-color: var(--pink); }
+  .btn-save-settings { padding: 12px 28px; background: var(--pink); color: white; border: none; border-radius: 50px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+
+  @media (max-width: 700px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+    .stats .stat-card:last-child { grid-column: 1/-1; }
+    th, td { padding: 10px 10px; font-size: 13px; }
+    .product-form { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div style="display:flex;align-items:center;">
+    <a class="nav-brand" href="index.html">🐾 โมเดล ฟิกเกอร์ by แมวแชร์</a>
+    <span class="nav-badge">ADMIN</span>
+  </div>
+  <a class="btn-nav-out" id="logoutBtn" href="#">ออกจากระบบ Admin</a>
+</nav>
+
+<div id="loginGate" class="main" style="display:none;">
+  <div class="login-gate">
+    <div style="font-size:40px;margin-bottom:12px;">🔒</div>
+    <h2>Admin Login</h2>
+    <p>กรอกรหัสผ่านผู้ดูแลระบบ (ตั้งค่าใน Script Properties ชื่อ ADMIN_KEY)</p>
+    <input type="password" id="adminPass" placeholder="Admin key" autocomplete="off">
+    <button onclick="checkAdminPass()">เข้าสู่ระบบ Admin</button>
+    <p class="err" id="passErr"></p>
+  </div>
+</div>
+
+<div id="adminPanel" class="main" style="display:none;">
+
+  <div class="stats">
+    <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-label">ยอดขายรวม</div><div class="stat-value pink" id="totalAmount">—</div></div>
+    <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">ออเดอร์ทั้งหมด</div><div class="stat-value" id="totalItems">—</div></div>
+    <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-label">รอตรวจสอบ</div><div class="stat-value" id="pendingItems">—</div></div>
+    <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">สมาชิก</div><div class="stat-value" id="memberCount">—</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('orders',this)">ออเดอร์</button>
+    <button class="tab-btn" onclick="switchTab('products',this)">สินค้า</button>
+    <button class="tab-btn" onclick="switchTab('members',this)">สมาชิก</button>
+    <button class="tab-btn" onclick="switchTab('settings',this)">ตั้งค่าร้าน</button>
+  </div>
+
+  <!-- ORDERS TAB -->
+  <div id="tab-orders" class="table-box">
+    <div class="table-header">
+      <h3>รายการสั่งซื้อ</h3>
+      <input class="search-input" placeholder="ค้นหาชื่อ/สินค้า..." id="searchOrder" oninput="filterTable('orderBody','searchOrder')">
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>วันที่</th><th>ลูกค้า</th><th>สินค้า</th><th>วิธีรับ</th><th>ยอดรวม</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+        <tbody id="orderBody"><tr><td colspan="7"><div class="loading-pulse"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PRODUCTS TAB -->
+  <div id="tab-products" class="table-box" style="display:none;">
+    <div class="table-header"><h3>จัดการสินค้า</h3></div>
+    <div class="product-form">
+      <div class="field"><label>ชื่อสินค้า</label><input type="text" id="newName" placeholder="ชื่อสินค้า"></div>
+      <div class="field"><label>ราคา (บาท)</label><input type="number" id="newPrice" placeholder="0"></div>
+      <div class="field"><label>ค่าส่ง (บาท)</label><input type="number" id="newShip" placeholder="50 หรือ 70"></div>
+      <div class="field"><label>URL รูปภาพ</label><input type="text" id="newImage" placeholder="https://..."></div>
+      <button class="btn-add" onclick="addProduct()">+ เพิ่มสินค้า</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>รูป</th><th>ชื่อสินค้า</th><th>ราคา</th><th>ค่าส่ง</th><th>จัดการ</th></tr></thead>
+        <tbody id="productBody"><tr><td colspan="5"><div class="loading-pulse"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MEMBERS TAB -->
+  <div id="tab-members" class="table-box" style="display:none;">
+    <div class="table-header">
+      <h3>รายชื่อสมาชิก</h3>
+      <input class="search-input" placeholder="ค้นหาชื่อ/อีเมล..." id="searchMember" oninput="filterTable('memberBody','searchMember')">
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>#</th><th>วันที่สมัคร</th><th>ชื่อบัญชี</th><th>อีเมล</th></tr></thead>
+        <tbody id="memberBody"><tr><td colspan="4"><div class="loading-pulse"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div id="tab-settings" style="display:none;">
+    <div class="settings-box">
+      <div class="field">
+        <label>ชื่อบัญชี PromptPay (แสดงหน้าชำระเงิน)</label>
+        <input type="text" id="setAccountName" placeholder="โมเดล ฟิกเกอร์ by แมวแชร์">
+      </div>
+      <div class="field">
+        <label>เบอร์พร้อมเพย์ / เลขบัตรประชาชน</label>
+        <input type="text" id="setPromptpay" placeholder="เช่น 0812345678">
+        <p class="hint">ใช้สร้าง QR code อัตโนมัติผ่าน promptpay.io — ไม่ต้องอัปโหลดรูป QR เอง</p>
+      </div>
+      <div class="field">
+        <label>สถานที่รับสินค้า</label>
+        <input type="text" id="setPickupLocation" placeholder="ตลาดนัด เซฟวัน โก สาขา บางนา">
+      </div>
+      <div class="field">
+        <label>วันที่เปิดร้าน / รับสินค้าได้</label>
+        <div class="day-chips" id="dayChips">
+          <div class="day-chip" data-day="จันทร์">จันทร์</div>
+          <div class="day-chip" data-day="อังคาร">อังคาร</div>
+          <div class="day-chip" data-day="พุธ">พุธ</div>
+          <div class="day-chip" data-day="พฤหัสบดี">พฤหัสบดี</div>
+          <div class="day-chip" data-day="ศุกร์">ศุกร์</div>
+          <div class="day-chip" data-day="เสาร์">เสาร์</div>
+          <div class="day-chip" data-day="อาทิตย์">อาทิตย์</div>
+        </div>
+      </div>
+      <button class="btn-save-settings" onclick="saveSettings()">บันทึกการตั้งค่า</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+document.getElementById("logoutBtn").addEventListener("click", function(e) {
+  e.preventDefault();
+  Session.adminKey = "";
+  window.location.href = "index.html";
+});
+
+async function init() {
+  if (Session.adminKey) {
+    const ok = await checkKey(Session.adminKey);
+    if (ok) { showPanel(); return; }
+  }
+  document.getElementById("loginGate").style.display = "block";
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  const pass = document.getElementById("adminPass");
+  if (pass) pass.addEventListener("keydown", function(e) { if (e.key === "Enter") checkAdminPass(); });
+  init();
+});
+
+async function checkKey(key) {
+  try {
+    const res = await apiCall("adminCheckKey", { key: key });
+    return !!res.ok;
+  } catch (err) { return false; }
+}
+
+async function checkAdminPass() {
+  const pass = document.getElementById("adminPass").value;
+  const ok = await checkKey(pass);
+  if (ok) {
+    Session.adminKey = pass;
+    document.getElementById("loginGate").style.display = "none";
+    showPanel();
+  } else {
+    document.getElementById("passErr").textContent = "รหัสผ่านไม่ถูกต้อง";
+  }
+}
+
+function showPanel() {
+  document.getElementById("adminPanel").style.display = "block";
+  loadOrders();
+  loadMembers();
+  loadProducts();
+  loadSettingsForm();
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = "toast show " + (type || "");
+  setTimeout(() => { t.className = "toast"; }, 2800);
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  ["orders","products","members","settings"].forEach(function(t) {
+    document.getElementById("tab-" + t).style.display = (t === tab) ? "block" : "none";
+  });
+}
+
+function filterTable(tbodyId, inputId) {
+  const q = document.getElementById(inputId).value.toLowerCase();
+  document.getElementById(tbodyId).querySelectorAll("tr").forEach(function(row) {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? "" : "none";
+  });
+}
+
+function badgeClass(status) {
+  if (!status) return "badge-pending";
+  if (status.includes("อนุมัติ") || status.includes("ยืนยัน")) return "badge-approved";
+  if (status.includes("ปฏิเสธ") || status.includes("ไม่")) return "badge-rejected";
+  return "badge-pending";
+}
+
+/* ===== ORDERS ===== */
+async function loadOrders() {
+  try {
+    const res = await apiCall("adminOrders", { key: Session.adminKey });
+    const list = res.list || [];
+    const total = list.reduce((s,r) => s + Number(r.total || 0), 0);
+    const pending = list.filter(r => (r.status||"").includes("รอ")).length;
+
+    document.getElementById("totalAmount").textContent = total.toLocaleString() + " ฿";
+    document.getElementById("totalItems").textContent = list.length;
+    document.getElementById("pendingItems").textContent = pending;
+
+    let html = "";
+    if (list.length === 0) {
+      html = `<tr><td colspan="7" class="empty-row">ยังไม่มีออเดอร์</td></tr>`;
+    } else {
+      list.forEach(function(r, idx) {
+        const status = r.status || "รอตรวจสอบ";
+        const isPending = status.includes("รอ");
+        const typeLabel = r.deliveryType === "delivery" ? "📦 จัดส่ง" : "🏪 รับที่ร้าน";
+        html += `
+          <tr id="order-row-${idx}">
+            <td style="font-size:12px;color:var(--gray)">${r.date}</td>
+            <td><b>${r.username}</b></td>
+            <td>${r.product}</td>
+            <td><span class="badge badge-type">${typeLabel}</span></td>
+            <td>${Number(r.total||0).toLocaleString()}</td>
+            <td><span class="badge ${badgeClass(status)}" id="order-status-${idx}">${status}</span></td>
+            <td>
+              ${isPending ? `
+                <div class="action-btns">
+                  <button class="btn-approve" onclick="updateOrder('${r.orderId}',${idx},'ยืนยันแล้ว')">✓ ยืนยัน</button>
+                  <button class="btn-reject" onclick="updateOrder('${r.orderId}',${idx},'ปฏิเสธ')">✗ ปฏิเสธ</button>
+                </div>` : '<span style="color:var(--gray);font-size:13px">—</span>'}
+            </td>
+          </tr>`;
+      });
+    }
+    document.getElementById("orderBody").innerHTML = html;
+  } catch (err) {
+    document.getElementById("orderBody").innerHTML = `<tr><td colspan="7" class="empty-row">โหลดข้อมูลไม่สำเร็จ</td></tr>`;
+    console.error(err);
+  }
+}
+
+async function updateOrder(orderId, idx, action) {
+  const badge = document.getElementById("order-status-" + idx);
+  const row = document.getElementById("order-row-" + idx);
+  try {
+    await apiCall("adminUpdateOrderStatus", { key: Session.adminKey, orderId: orderId, status: action });
+    if (badge) { badge.textContent = action; badge.className = "badge " + badgeClass(action); }
+    const btns = row.querySelector(".action-btns");
+    if (btns) btns.innerHTML = '<span style="color:var(--gray);font-size:13px">บันทึกแล้ว</span>';
+    showToast(action === "ยืนยันแล้ว" ? "✓ ยืนยันออเดอร์แล้ว" : "✗ ปฏิเสธออเดอร์แล้ว", action === "ยืนยันแล้ว" ? "green" : "red");
+  } catch (err) {
+    showToast("เกิดข้อผิดพลาด", "red");
+    console.error(err);
+  }
+}
+
+/* ===== MEMBERS ===== */
+async function loadMembers() {
+  try {
+    const members = await apiCall("adminMembers", { key: Session.adminKey });
+    document.getElementById("memberCount").textContent = members.length;
+    let html = "";
+    if (members.length === 0) {
+      html = `<tr><td colspan="4" class="empty-row">ยังไม่มีสมาชิก</td></tr>`;
+    } else {
+      members.forEach(function(m, i) {
+        html += `<tr><td style="color:var(--gray)">${i+1}</td><td style="font-size:12px;color:var(--gray)">${m.date}</td><td><b>${m.username}</b></td><td style="color:var(--gray)">${m.email}</td></tr>`;
+      });
+    }
+    document.getElementById("memberBody").innerHTML = html;
+  } catch (err) { console.error(err); }
+}
+
+/* ===== PRODUCTS ===== */
+async function loadProducts() {
+  try {
+    const products = await apiCall("products");
+    let html = "";
+    if (products.length === 0) {
+      html = `<tr><td colspan="5" class="empty-row">ยังไม่มีสินค้า</td></tr>`;
+    } else {
+      products.forEach(function(p, i) {
+        const img = p.image || "https://placehold.co/60x60/fdf0f3/e8547a?text=?";
+        html += `
+          <tr>
+            <td><img src="${img}" style="width:44px;height:44px;border-radius:8px;object-fit:cover;" onerror="this.src='https://placehold.co/60x60/fdf0f3/e8547a?text=?'"></td>
+            <td><b>${p.name}</b></td>
+            <td>${p.price.toLocaleString()} ฿</td>
+            <td><input class="ship-input" type="number" id="ship-${i}" value="${p.shippingFee}"></td>
+            <td>
+              <div class="action-btns">
+                <button class="btn-edit" onclick="saveShipping('${p.name.replace(/'/g,"\\'")}',${i})">บันทึกค่าส่ง</button>
+                <button class="btn-del" onclick="removeProduct('${p.name.replace(/'/g,"\\'")}')">ลบ</button>
+              </div>
+            </td>
+          </tr>`;
+      });
+    }
+    document.getElementById("productBody").innerHTML = html;
+  } catch (err) {
+    document.getElementById("productBody").innerHTML = `<tr><td colspan="5" class="empty-row">โหลดข้อมูลไม่สำเร็จ</td></tr>`;
+    console.error(err);
+  }
+}
+
+async function addProduct() {
+  const name = document.getElementById("newName").value.trim();
+  const price = document.getElementById("newPrice").value.trim();
+  const ship = document.getElementById("newShip").value.trim() || "0";
+  const image = document.getElementById("newImage").value.trim();
+
+  if (!name || !price) { showToast("กรุณากรอกชื่อและราคาสินค้า", "red"); return; }
+
+  try {
+    await apiCall("adminUpdateProduct", { key: Session.adminKey, name: name, price: price, shippingFee: ship, image: image });
+    showToast("✓ เพิ่มสินค้าแล้ว", "green");
+    document.getElementById("newName").value = "";
+    document.getElementById("newPrice").value = "";
+    document.getElementById("newShip").value = "";
+    document.getElementById("newImage").value = "";
+    loadProducts();
+  } catch (err) {
+    showToast("เกิดข้อผิดพลาด", "red");
+    console.error(err);
+  }
+}
+
+async function saveShipping(name, idx) {
+  const ship = document.getElementById("ship-" + idx).value;
+  try {
+    // ไม่ส่ง price/image ไป — backend จะคงค่าที่มีอยู่เดิมไว้ให้อัตโนมัติ
+    await apiCall("adminUpdateProduct", { key: Session.adminKey, name: name, oldName: name, shippingFee: ship });
+    showToast("✓ บันทึกค่าส่งแล้ว", "green");
+    loadProducts();
+  } catch (err) {
+    showToast("เกิดข้อผิดพลาด", "red");
+    console.error(err);
+  }
+}
+
+async function removeProduct(name) {
+  if (!confirm("ลบสินค้า \\"" + name + "\\" ใช่หรือไม่?")) return;
+  try {
+    await apiCall("adminDeleteProduct", { key: Session.adminKey, name: name });
+    showToast("✓ ลบสินค้าแล้ว", "green");
+    loadProducts();
+  } catch (err) {
+    showToast("เกิดข้อผิดพลาด", "red");
+    console.error(err);
+  }
+}
+
+/* ===== SETTINGS ===== */
+let selectedDays = [];
+
+document.getElementById("dayChips").addEventListener("click", function(e) {
+  const chip = e.target.closest(".day-chip");
+  if (!chip) return;
+  const day = chip.dataset.day;
+  if (selectedDays.includes(day)) {
+    selectedDays = selectedDays.filter(d => d !== day);
+    chip.classList.remove("active");
+  } else {
+    selectedDays.push(day);
+    chip.classList.add("active");
+  }
+});
+
+async function loadSettingsForm() {
+  try {
+    const s = await apiCall("settings");
+    document.getElementById("setAccountName").value = s.accountName || "";
+    document.getElementById("setPromptpay").value = s.promptpayId || "";
+    document.getElementById("setPickupLocation").value = s.pickupLocation || "";
+
+    selectedDays = (s.pickupDays || "").split(",").map(d => d.trim()).filter(Boolean);
+    document.querySelectorAll(".day-chip").forEach(function(chip) {
+      chip.classList.toggle("active", selectedDays.includes(chip.dataset.day));
+    });
+  } catch (err) { console.error(err); }
+}
+
+async function saveSettings() {
+  const payload = {
+    key: Session.adminKey,
+    accountName: document.getElementById("setAccountName").value.trim(),
+    promptpayId: document.getElementById("setPromptpay").value.trim(),
+    pickupLocation: document.getElementById("setPickupLocation").value.trim(),
+    pickupDays: selectedDays.join(",")
+  };
+  try {
+    await apiCall("adminUpdateSettings", payload);
+    showToast("✓ บันทึกการตั้งค่าแล้ว", "green");
+  } catch (err) {
+    showToast("เกิดข้อผิดพลาด", "red");
+    console.error(err);
+  }
+}
+</script>
+</body>
+</html>

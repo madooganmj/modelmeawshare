@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>สั่งซื้อ — โมเดล ฟิกเกอร์ by แมวแชร์</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --pink: #e8547a; --pink-lt: #fdf0f3; --pink-md: #fbd5de; --dark: #1a1a2e; --gray: #6b7280; --radius: 20px; }
+  body { font-family: 'Sarabun', sans-serif; background: #f9fafb; color: var(--dark); min-height: 100vh; }
+
+  .nav { background: white; border-bottom: 1px solid #f0f0f0; padding: 0 24px; height: 60px; display: flex; align-items: center; }
+  .nav a { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--pink); text-decoration: none; }
+
+  .wrap { max-width: 640px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  .product-card {
+    background: white; border-radius: var(--radius); padding: 18px;
+    display: flex; gap: 16px; align-items: center; border: 1px solid #f0f0f0;
+    margin-bottom: 24px;
+  }
+  .product-card img { width: 84px; height: 84px; border-radius: 14px; object-fit: cover; background: #f5f5f5; }
+  .product-card .pname { font-size: 16px; font-weight: 600; }
+  .product-card .pprice { font-size: 20px; font-weight: 700; color: var(--pink); margin-top: 4px; }
+
+  .step-title { font-size: 16px; font-weight: 600; margin: 24px 0 12px; }
+
+  .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .option-box {
+    background: white; border: 1.5px solid #e5e7eb; border-radius: 14px;
+    padding: 16px; cursor: pointer; text-align: center; transition: all 0.2s;
+  }
+  .option-box.active { border-color: var(--pink); background: var(--pink-lt); }
+  .option-box .icon { font-size: 26px; margin-bottom: 8px; }
+  .option-box .title { font-size: 14px; font-weight: 600; }
+  .option-box .sub { font-size: 12px; color: var(--gray); margin-top: 2px; }
+
+  .panel { background: white; border-radius: var(--radius); border: 1px solid #f0f0f0; padding: 20px; margin-top: 16px; display: none; }
+  .panel.show { display: block; }
+
+  .field { margin-bottom: 16px; }
+  label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+  input, select, textarea {
+    width: 100%; padding: 12px 16px; border: 1.5px solid #e5e7eb; border-radius: 12px;
+    font-family: 'Sarabun', sans-serif; font-size: 15px; background: #fafafa; outline: none;
+    transition: all 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(232,84,122,0.12); background: white; }
+  textarea { resize: vertical; min-height: 70px; }
+
+  .pickup-days { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pickup-day-chip {
+    padding: 8px 14px; border-radius: 50px; border: 1.5px solid #e5e7eb;
+    font-size: 13px; cursor: pointer; transition: all 0.2s; background: white;
+  }
+  .pickup-day-chip.active { background: var(--pink); color: white; border-color: var(--pink); }
+
+  .summary-box { background: var(--pink-lt); border: 1.5px solid var(--pink-md); border-radius: 14px; padding: 16px 20px; margin-top: 20px; }
+  .summary-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+  .summary-row.total { font-size: 18px; font-weight: 700; color: var(--pink); border-top: 1px solid var(--pink-md); padding-top: 10px; margin-top: 8px; }
+
+  .qr-box { text-align: center; margin-top: 20px; padding: 20px; background: white; border-radius: 16px; border: 1.5px solid #f0f0f0; }
+  .qr-box img { width: 220px; height: 220px; border-radius: 12px; margin-bottom: 12px; }
+  .qr-account { font-size: 15px; font-weight: 600; }
+  .qr-hint { font-size: 13px; color: var(--gray); margin-top: 4px; }
+
+  .btn-submit { width: 100%; padding: 15px; background: var(--pink); color: white; border: none; border-radius: 50px; cursor: pointer; font-size: 16px; font-weight: 600; box-shadow: 0 8px 20px rgba(232,84,122,0.35); transition: all 0.2s; margin-top: 20px; }
+  .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .msg { text-align: center; margin-top: 14px; font-size: 14px; min-height: 20px; }
+  .msg.error { color: #dc2626; } .msg.info { color: var(--gray); }
+
+  .success-card { display: none; text-align: center; padding: 30px 20px; }
+  .success-icon { font-size: 56px; margin-bottom: 14px; }
+  .success-card h3 { font-size: 20px; font-weight: 700; color: #16a34a; margin-bottom: 8px; }
+  .success-card p { color: var(--gray); font-size: 14px; line-height: 1.6; }
+  .success-actions { margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .success-actions a { padding: 10px 22px; border-radius: 50px; font-size: 14px; font-weight: 600; text-decoration: none; }
+  .btn-a { background: var(--pink); color: white; }
+  .btn-b { border: 1.5px solid #e5e7eb; color: var(--gray); }
+</style>
+</head>
+<body>
+
+<nav class="nav"><a href="index.html">🐾 โมเดล ฟิกเกอร์ by แมวแชร์</a></nav>
+
+<div class="wrap">
+
+  <div id="orderSection">
+    <div class="product-card">
+      <img id="pImage" src="" alt="">
+      <div>
+        <div class="pname" id="pName">—</div>
+        <div class="pprice" id="pPrice">—</div>
+      </div>
+    </div>
+
+    <div class="step-title">1. เลือกวิธีรับสินค้า</div>
+    <div class="option-grid">
+      <div class="option-box" id="optDelivery" onclick="selectType('delivery')">
+        <div class="icon">📦</div>
+        <div class="title">จัดส่งถึงบ้าน</div>
+        <div class="sub" id="shipFeeLabel">+ ค่าส่ง</div>
+      </div>
+      <div class="option-box" id="optPickup" onclick="selectType('pickup')">
+        <div class="icon">🏪</div>
+        <div class="title">รับที่ร้าน</div>
+        <div class="sub">ไม่มีค่าส่ง</div>
+      </div>
+    </div>
+
+    <!-- DELIVERY PANEL -->
+    <div class="panel" id="panelDelivery">
+      <div class="field">
+        <label>ชื่อผู้รับ</label>
+        <input type="text" id="recvName" placeholder="ชื่อ-นามสกุลผู้รับ">
+      </div>
+      <div class="field">
+        <label>ที่อยู่จัดส่ง</label>
+        <textarea id="address" placeholder="บ้านเลขที่ / ถนน / ตำบล / อำเภอ / จังหวัด / รหัสไปรษณีย์"></textarea>
+      </div>
+      <div class="field">
+        <label>เบอร์โทรศัพท์</label>
+        <input type="tel" id="phone" placeholder="08xxxxxxxx">
+      </div>
+    </div>
+
+    <!-- PICKUP PANEL -->
+    <div class="panel" id="panelPickup">
+      <div class="field">
+        <label>สถานที่รับสินค้า</label>
+        <input type="text" id="pickupLocation" readonly>
+      </div>
+      <div class="field">
+        <label>เลือกวันที่ไปรับ</label>
+        <input type="date" id="pickupDate">
+        <p style="font-size:12px; color:var(--gray); margin-top:6px;">
+          ร้านเปิดขายเฉพาะวัน: <span id="pickupDaysText">—</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="summary-box" id="summaryBox" style="display:none;">
+      <div class="summary-row"><span>ราคาสินค้า</span><span id="sumPrice">0 บาท</span></div>
+      <div class="summary-row" id="sumShipRow"><span>ค่าจัดส่ง</span><span id="sumShip">0 บาท</span></div>
+      <div class="summary-row total"><span>ยอดชำระทั้งหมด</span><span id="sumTotal">0 บาท</span></div>
+    </div>
+
+    <!-- QR PAYMENT -->
+    <div class="qr-box" id="qrBox" style="display:none;">
+      <img id="qrImg" src="" alt="PromptPay QR">
+      <div class="qr-account" id="qrAccountName">—</div>
+      <div class="qr-hint">สแกนจ่ายผ่านแอปธนาคาร แล้วกดยืนยันคำสั่งซื้อด้านล่าง</div>
+    </div>
+
+    <button id="submitBtn" class="btn-submit" onclick="submitOrder()" disabled>เลือกวิธีรับสินค้าก่อน</button>
+    <div id="msg" class="msg"></div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div id="successSection" class="success-card">
+    <div class="success-icon">🎉</div>
+    <h3>สั่งซื้อสำเร็จ!</h3>
+    <p>ทีมงานจะตรวจสอบการชำระเงินและอัปเดตสถานะให้เร็วที่สุด</p>
+    <div class="success-actions">
+      <a href="orders.html" class="btn-a">ดูออเดอร์ของฉัน</a>
+      <a href="index.html" class="btn-b">เลือกซื้อต่อ</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="config.js"></script>
+<script>
+const params = new URLSearchParams(window.location.search);
+const product = params.get("product") || "";
+const price = Number(params.get("price") || 0);
+const shippingFee = Number(params.get("shipping") || 0);
+const image = params.get("image") || "https://placehold.co/300x300/fdf0f3/e8547a?text=Model";
+
+document.getElementById("pImage").src = image;
+document.getElementById("pName").textContent = product;
+document.getElementById("pPrice").textContent = price.toLocaleString() + " บาท";
+document.getElementById("shipFeeLabel").textContent = "+ ค่าส่ง " + shippingFee.toLocaleString() + " บาท";
+
+let deliveryType = "";
+let settings = null;
+
+async function loadSettings() {
+  try {
+    settings = await apiCall("settings");
+    document.getElementById("pickupLocation").value = settings.pickupLocation || "";
+    document.getElementById("pickupDaysText").textContent = settings.pickupDays || "-";
+  } catch (err) {
+    console.error(err);
+  }
+}
+loadSettings();
+
+function selectType(type) {
+  deliveryType = type;
+  document.getElementById("optDelivery").classList.toggle("active", type === "delivery");
+  document.getElementById("optPickup").classList.toggle("active", type === "pickup");
+  document.getElementById("panelDelivery").classList.toggle("show", type === "delivery");
+  document.getElementById("panelPickup").classList.toggle("show", type === "pickup");
+
+  const ship = type === "delivery" ? shippingFee : 0;
+  const total = price + ship;
+
+  document.getElementById("summaryBox").style.display = "block";
+  document.getElementById("sumPrice").textContent = price.toLocaleString() + " บาท";
+  document.getElementById("sumShipRow").style.display = type === "delivery" ? "flex" : "none";
+  document.getElementById("sumShip").textContent = ship.toLocaleString() + " บาท";
+  document.getElementById("sumTotal").textContent = total.toLocaleString() + " บาท";
+
+  if (settings && settings.promptpayId) {
+    document.getElementById("qrBox").style.display = "block";
+    document.getElementById("qrImg").src = "https://promptpay.io/" + settings.promptpayId + "/" + total + ".png";
+    document.getElementById("qrAccountName").textContent = settings.accountName || "";
+  }
+
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = false;
+  btn.textContent = "ยืนยันคำสั่งซื้อ (" + total.toLocaleString() + " บาท)";
+}
+
+function setMsg(text, type) {
+  const el = document.getElementById("msg");
+  el.textContent = text; el.className = "msg " + (type || "info");
+}
+
+async function submitOrder() {
+  if (!deliveryType) { setMsg("กรุณาเลือกวิธีรับสินค้า", "error"); return; }
+
+  const user = Session.user;
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const payload = {
+    username: user,
+    product: product,
+    price: price,
+    shippingFee: shippingFee,
+    deliveryType: deliveryType
+  };
+
+  if (deliveryType === "delivery") {
+    const address = document.getElementById("address").value.trim();
+    const recvName = document.getElementById("recvName").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    if (!address || !recvName || !phone) { setMsg("กรุณากรอกข้อมูลจัดส่งให้ครบ", "error"); return; }
+    payload.address = recvName + " โทร " + phone + " — " + address;
+  } else {
+    const pickupDate = document.getElementById("pickupDate").value;
+    if (!pickupDate) { setMsg("กรุณาเลือกวันที่รับสินค้า", "error"); return; }
+    payload.pickupDate = pickupDate;
+  }
+
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true;
+  setMsg("กำลังบันทึกคำสั่งซื้อ...", "info");
+
+  try {
+    const res = await apiCall("placeOrder", payload);
+    btn.disabled = false;
+    if (res.status === "success") {
+      document.getElementById("orderSection").style.display = "none";
+      document.getElementById("successSection").style.display = "block";
+    } else {
+      setMsg(res.message || "เกิดข้อผิดพลาด", "error");
+    }
+  } catch (err) {
+    btn.disabled = false;
+    setMsg("ระบบขัดข้อง กรุณาลองใหม่", "error");
+    console.error(err);
+  }
+}
+</script>
+</body>
+</html>

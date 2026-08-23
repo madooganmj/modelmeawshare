@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เข้าสู่ระบบ — โมเดล ฟิกเกอร์ by แมวแชร์</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --pink: #e8547a; --pink-lt: #fdf0f3; --pink-md: #fbd5de; --dark: #1a1a2e; --gray: #6b7280; --radius: 20px; }
+  body {
+    font-family: 'Sarabun', sans-serif; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #fff5f7 0%, #f9fafb 60%, #fff 100%);
+    padding: 24px; position: relative; overflow: hidden;
+  }
+  body::before { content:''; position: fixed; top:-30%; left:-20%; width:600px; height:600px; background: radial-gradient(circle, #fbd5de55, transparent 65%); pointer-events:none; }
+
+  .card { background: white; border-radius: var(--radius); padding: 40px 36px; width: 100%; max-width: 420px; box-shadow: 0 24px 60px rgba(232,84,122,0.12), 0 4px 16px rgba(0,0,0,0.06); position: relative; z-index: 1; }
+  .logo { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--pink); text-align: center; margin-bottom: 6px; text-decoration: none; display: block; }
+  .subtitle { text-align: center; color: var(--gray); font-size: 14px; margin-bottom: 32px; }
+  h2 { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 28px; }
+
+  .field { margin-bottom: 18px; }
+  label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+  input { width: 100%; padding: 12px 16px; border: 1.5px solid #e5e7eb; border-radius: 12px; font-family: 'Sarabun', sans-serif; font-size: 15px; background: #fafafa; outline: none; transition: all 0.2s; }
+  input:focus { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(232,84,122,0.12); background: white; }
+
+  .btn-submit { width: 100%; padding: 14px; background: var(--pink); color: white; border: none; border-radius: 50px; cursor: pointer; font-size: 16px; font-weight: 600; box-shadow: 0 8px 20px rgba(232,84,122,0.35); transition: all 0.2s; margin-top: 4px; }
+  .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .msg { text-align: center; margin-top: 14px; font-size: 14px; min-height: 20px; }
+  .msg.error { color: #dc2626; } .msg.success { color: #16a34a; } .msg.info { color: var(--gray); }
+
+  .links { text-align: center; margin-top: 24px; font-size: 14px; color: var(--gray); }
+  .links a { color: var(--pink); font-weight: 600; text-decoration: none; }
+  .links a:hover { text-decoration: underline; }
+  .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
+  .divider span { font-size: 13px; color: var(--gray); }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <a class="logo" href="index.html">🐾 โมเดล ฟิกเกอร์ by แมวแชร์</a>
+  <p class="subtitle">เข้าสู่ระบบเพื่อสั่งซื้อและติดตามออเดอร์</p>
+  <h2>เข้าสู่ระบบ</h2>
+
+  <div class="field">
+    <label for="username">ชื่อบัญชี / อีเมล</label>
+    <input type="text" id="username" placeholder="กรอกชื่อบัญชีหรืออีเมล" autocomplete="username">
+  </div>
+  <div class="field">
+    <label for="password">รหัสผ่าน</label>
+    <input type="password" id="password" placeholder="กรอกรหัสผ่าน" autocomplete="current-password">
+  </div>
+  <div style="text-align:right; margin-top:-8px; margin-bottom:16px;">
+    <a href="forgot-password.html" style="font-size:13px; color:var(--pink); text-decoration:none;">ลืมรหัสผ่าน?</a>
+  </div>
+
+  <button id="loginBtn" class="btn-submit" onclick="login()">เข้าสู่ระบบ</button>
+  <div id="msg" class="msg info"></div>
+
+  <div class="divider"><span>หรือ</span></div>
+  <div class="links">ยังไม่มีบัญชี? <a href="register.html">สมัครสมาชิก</a></div>
+</div>
+
+<script src="config.js"></script>
+<script>
+if (Session.user) window.location.href = "orders.html";
+
+["username","password"].forEach(function(id){
+  document.getElementById(id).addEventListener("keydown", function(e){ if (e.key === "Enter") login(); });
+});
+
+function setMsg(text, type) {
+  const el = document.getElementById("msg");
+  el.textContent = text; el.className = "msg " + (type || "info");
+}
+
+async function login() {
+  const user = document.getElementById("username").value.trim();
+  const pass = document.getElementById("password").value.trim();
+  const btn = document.getElementById("loginBtn");
+  if (!user || !pass) { setMsg("กรุณากรอกข้อมูลให้ครบ", "error"); return; }
+
+  setMsg("กำลังเข้าสู่ระบบ...", "info");
+  btn.disabled = true;
+  try {
+    const res = await apiCall("login", { user: user, pass: pass });
+    btn.disabled = false;
+    if (res.status === "success") {
+      Session.user = res.username || user;
+      setMsg("เข้าสู่ระบบสำเร็จ! กำลังพาไป...", "success");
+      setTimeout(() => window.location.href = "orders.html", 500);
+    } else {
+      setMsg("ชื่อบัญชีหรือรหัสผ่านไม่ถูกต้อง", "error");
+    }
+  } catch (err) {
+    btn.disabled = false;
+    setMsg("ระบบขัดข้อง กรุณาลองใหม่", "error");
+    console.error(err);
+  }
+}
+</script>
+</body>
+</html>

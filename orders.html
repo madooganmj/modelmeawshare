@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ออเดอร์ของฉัน — โมเดล ฟิกเกอร์ by แมวแชร์</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --pink: #e8547a; --pink-lt: #fdf0f3; --pink-md: #fbd5de; --dark: #1a1a2e; --gray: #6b7280; --light: #f9fafb; --radius: 16px; }
+  body { font-family: 'Sarabun', sans-serif; background: var(--light); color: var(--dark); min-height: 100vh; }
+
+  .nav { background: white; border-bottom: 1px solid #f0f0f0; padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  .nav-brand { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--pink); text-decoration: none; }
+  .nav-user { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--pink-md); color: var(--pink); font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .nav-username { font-size: 14px; font-weight: 500; }
+  .btn-logout { padding: 6px 16px; border-radius: 50px; border: 1.5px solid #e5e7eb; color: var(--gray); background: transparent; font-size: 13px; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+  .btn-logout:hover { border-color: var(--pink); color: var(--pink); }
+
+  .main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
+
+  .banner {
+    background: linear-gradient(135deg, var(--pink) 0%, #c0395b 100%); border-radius: var(--radius);
+    padding: 26px 30px; color: white; display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px; margin-bottom: 28px;
+  }
+  .banner h2 { font-size: 21px; font-weight: 700; margin-bottom: 4px; }
+  .banner p { font-size: 14px; opacity: 0.85; }
+  .btn-shop { padding: 11px 22px; border-radius: 50px; background: white; color: var(--pink); border: none; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.2s; white-space: nowrap; }
+  .btn-shop:hover { opacity: 0.92; transform: translateY(-1px); }
+
+  .stats { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card { background: white; border-radius: var(--radius); padding: 20px; border: 1px solid #f0f0f0; }
+  .stat-label { font-size: 13px; color: var(--gray); margin-bottom: 6px; }
+  .stat-value { font-size: 24px; font-weight: 700; }
+  .stat-value.pink { color: var(--pink); }
+
+  .order-list { display: flex; flex-direction: column; gap: 14px; }
+  .order-card { background: white; border-radius: var(--radius); border: 1px solid #f0f0f0; padding: 18px 20px; }
+  .order-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+  .order-product { font-size: 16px; font-weight: 600; }
+  .order-date { font-size: 12px; color: var(--gray); margin-top: 2px; }
+  .order-total { font-size: 18px; font-weight: 700; color: var(--pink); }
+
+  .order-meta { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: var(--gray); }
+  .order-meta span { display: flex; align-items: center; gap: 5px; }
+
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 50px; font-size: 12px; font-weight: 600; margin-top: 10px; }
+  .badge-pending { background: #fff7ed; color: #c2410c; }
+  .badge-approved { background: #f0fdf4; color: #16a34a; }
+  .badge-rejected { background: #fef2f2; color: #dc2626; }
+
+  .empty-box { text-align: center; padding: 60px 20px; color: var(--gray); background: white; border-radius: var(--radius); border: 1px solid #f0f0f0; }
+  .empty-icon { font-size: 44px; margin-bottom: 14px; }
+
+  .loading-pulse { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 48px; color: var(--gray); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); animation: pulse 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; } .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
+
+  @media (max-width: 600px) { .banner { padding: 20px; } }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-brand" href="index.html">🐾 โมเดล ฟิกเกอร์ by แมวแชร์</a>
+  <div class="nav-user">
+    <div class="avatar" id="avatarEl">?</div>
+    <span class="nav-username" id="navUsername">—</span>
+    <a class="btn-logout" id="logoutBtn" href="#">ออกจากระบบ</a>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="banner">
+    <div>
+      <h2 id="welcomeText">ยินดีต้อนรับ!</h2>
+      <p>ดูประวัติออเดอร์และสถานะการจัดส่ง/นัดรับของคุณ</p>
+    </div>
+    <a class="btn-shop" href="index.html">+ สั่งซื้อสินค้าเพิ่ม</a>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">ยอดสั่งซื้อทั้งหมด</div>
+      <div class="stat-value pink" id="sumTotal">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">จำนวนออเดอร์</div>
+      <div class="stat-value" id="countItem">—</div>
+    </div>
+  </div>
+
+  <div id="orderList" class="order-list">
+    <div class="loading-pulse"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+const user = Session.user;
+if (!user) window.location.href = "login.html";
+
+document.getElementById("welcomeText").textContent = "ยินดีต้อนรับ, " + user + "!";
+document.getElementById("navUsername").textContent = user;
+document.getElementById("avatarEl").textContent = user.charAt(0).toUpperCase();
+
+document.getElementById("logoutBtn").addEventListener("click", function(e) {
+  e.preventDefault();
+  Session.user = "";
+  window.location.href = "login.html";
+});
+
+function badgeClass(status) {
+  if (!status) return "badge-pending";
+  if (status.includes("อนุมัติ") || status.includes("ยืนยัน")) return "badge-approved";
+  if (status.includes("ปฏิเสธ") || status.includes("ไม่")) return "badge-rejected";
+  return "badge-pending";
+}
+
+async function loadOrders() {
+  try {
+    const res = await apiCall("myOrders", { user: user });
+    document.getElementById("sumTotal").textContent = Number(res.total || 0).toLocaleString() + " บาท";
+    document.getElementById("countItem").textContent = res.count || 0;
+
+    const list = res.list || [];
+    const container = document.getElementById("orderList");
+
+    if (list.length === 0) {
+      container.innerHTML = `<div class="empty-box"><div class="empty-icon">📦</div><p>ยังไม่มีออเดอร์ — ไปเลือกฟิกเกอร์ที่ชอบกันเลย!</p></div>`;
+      return;
+    }
+
+    container.innerHTML = list.map(function(o) {
+      const typeLabel = o.deliveryType === "delivery" ? "📦 จัดส่งถึงบ้าน" : "🏪 รับที่ร้าน";
+      const dateInfo = o.deliveryType === "delivery" ? "" : `<span>📅 นัดรับ: ${o.pickupDate}</span>`;
+      return `
+        <div class="order-card">
+          <div class="order-top">
+            <div>
+              <div class="order-product">${o.product}</div>
+              <div class="order-date">${o.date}</div>
+            </div>
+            <div class="order-total">${Number(o.total||0).toLocaleString()} บาท</div>
+          </div>
+          <div class="order-meta">
+            <span>${typeLabel}</span>
+            ${dateInfo}
+          </div>
+          <span class="badge ${badgeClass(o.status)}">${o.status}</span>
+        </div>`;
+    }).join("");
+  } catch (err) {
+    document.getElementById("orderList").innerHTML = `<div class="empty-box">โหลดข้อมูลไม่สำเร็จ</div>`;
+    console.error(err);
+  }
+}
+loadOrders();
+</script>
+</body>
+</html>
