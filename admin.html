@@ -447,7 +447,7 @@ async function saveShipping(name, idx) {
 }
 
 async function removeProduct(name) {
-  if (!confirm("ลบสินค้า \\"" + name + "\\" ใช่หรือไม่?")) return;
+  if (!confirm("ลบสินค้า \"" + name + "\" ใช่หรือไม่?")) return;
   try {
     await apiCall("adminDeleteProduct", { key: Session.adminKey, name: name });
     showToast("✓ ลบสินค้าแล้ว", "green");
